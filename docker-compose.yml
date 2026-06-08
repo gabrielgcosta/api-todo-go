@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: todo_postgres
+    environment:
+      POSTGRES_USER: gopher
+      POSTGRES_PASSWORD: todolist123
+      POSTGRES_DB: tododb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build: .
+    container_name: todo_api
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: "host=db port=5432 user=gopher password=todolist123 dbname=tododb sslmode=disable"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:

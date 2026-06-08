@@ -1,0 +1,28 @@
+# Binaries
+main
+main.exe
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binaries
+*.test
+*.test.exe
+
+# IDE / Editor configurations
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Go module cache / vendor
+vendor/
+
+# OS specific files
+.DS_Store
+Thumbs.db
