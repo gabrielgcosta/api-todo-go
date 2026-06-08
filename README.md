@@ -23,7 +23,7 @@ Você não precisa ter o Go ou PostgreSQL instalados na sua máquina local, apen
 
 1. Clone este repositório:
    ```bash
-   git clone <url-do-seu-repositorio>
+   git clone https://github.com/gabrielgcosta/api-todo-go.git
    cd api
    ```
 
