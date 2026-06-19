@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"todo_api/apierror"
 )
 
 // TaskRepository defines the database operations required for tasks.
@@ -54,18 +55,18 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
-		http.Error(w, "invalid JSON", http.StatusBadRequest)
+		apierror.Write(w, r, apierror.BadRequest("invalid JSON", err))
 		return
 	}
 
 	if err := input.Validate(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		apierror.Write(w, r, apierror.BadRequest(err.Error(), nil))
 		return
 	}
 
 	createdTask, err := h.repo.Create(input.Title)
 	if err != nil {
-		http.Error(w, "Error inserting task in database", http.StatusInternalServerError)
+		apierror.Write(w, r, apierror.Internal("Error inserting task in database", err))
 		return
 	}
 
@@ -77,7 +78,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	tasks, err := h.repo.List()
 	if err != nil {
-		http.Error(w, "Failed fetching data", http.StatusInternalServerError)
+		apierror.Write(w, r, apierror.Internal("Failed fetching data", err))
 		return
 	}
 
@@ -89,29 +90,29 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		apierror.Write(w, r, apierror.BadRequest("Invalid ID", err))
 		return
 	}
 
 	var input UpdateInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		apierror.Write(w, r, apierror.BadRequest("Invalid JSON", err))
 		return
 	}
 
 	if err := input.Validate(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		apierror.Write(w, r, apierror.BadRequest(err.Error(), nil))
 		return
 	}
 
 	rowsAffected, err := h.repo.Update(id, input.Title, input.Finished)
 	if err != nil {
-		http.Error(w, "Update failed", http.StatusInternalServerError)
+		apierror.Write(w, r, apierror.Internal("Update failed", err))
 		return
 	}
 
 	if rowsAffected == 0 {
-		http.Error(w, "Task not found", http.StatusNotFound)
+		apierror.Write(w, r, apierror.NotFound("Task not found", nil))
 		return
 	}
 
@@ -123,18 +124,18 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		apierror.Write(w, r, apierror.BadRequest("Invalid ID", err))
 		return
 	}
 
 	rowsAffected, err := h.repo.Delete(id)
 	if err != nil {
-		http.Error(w, "Delete failed", http.StatusInternalServerError)
+		apierror.Write(w, r, apierror.Internal("Delete failed", err))
 		return
 	}
 
 	if rowsAffected == 0 {
-		http.Error(w, "Task not found", http.StatusNotFound)
+		apierror.Write(w, r, apierror.NotFound("Task not found", nil))
 		return
 	}
 

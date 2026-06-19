@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"todo_api/database"
+	"todo_api/middleware"
 	"todo_api/task"
 )
 
@@ -24,11 +25,14 @@ func main() {
 	taskRepo := task.NewRepository(db)
 	taskHandler := task.NewHandler(taskRepo)
 
-	http.HandleFunc("POST /tasks", taskHandler.Create)
-	http.HandleFunc("GET /tasks", taskHandler.List)
-	http.HandleFunc("PUT /tasks/{id}", taskHandler.Update)
-	http.HandleFunc("DELETE /tasks/{id}", taskHandler.Delete)
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /tasks", taskHandler.Create)
+	mux.HandleFunc("GET /tasks", taskHandler.List)
+	mux.HandleFunc("PUT /tasks/{id}", taskHandler.Update)
+	mux.HandleFunc("DELETE /tasks/{id}", taskHandler.Delete)
+
+	loggedMux := middleware.Logger(mux)
 
 	fmt.Println("Server running on port: 8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":8080", loggedMux))
 }

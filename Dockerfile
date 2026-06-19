@@ -8,7 +8,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # Copia o código-fonte restante
-COPY main.go ./
+COPY . .
 
 # Compila o binário estaticamente para o Linux
 RUN CGO_ENABLED=0 GOOS=linux go build -o main main.go
