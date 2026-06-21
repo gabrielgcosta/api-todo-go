@@ -87,9 +87,33 @@ A API estará rodando em `http://localhost:8080` e criará automaticamente a tab
 
 ---
 
+## 🏗️ Arquitetura & Recursos Recentes
+
+A API adota práticas de arquitetura modular, focada em testabilidade, segurança e observabilidade:
+- **Middleware de Log**: Registra automaticamente no stdout detalhes de cada requisição (método, caminho, IP, status code HTTP, duração e causa raiz detalhada de eventuais falhas).
+- **Tratamento de Erros Centralizado (`apierror`)**: Retorna erros padronizados em JSON (`{"error": "message"}`). Utiliza `errors.As` para extrair detalhes estruturados e ocultar erros sensíveis de banco de dados do cliente final, registrando o erro raiz detalhado apenas no log interno.
+- **Worker de Eventos Assíncronos (`worker`)**: Um processador em segundo plano rodando em uma goroutine. Os handlers HTTP despacham eventos de CRUD para canais em memória, liberando a resposta HTTP para o cliente imediatamente.
+
+---
+
+## 🧪 Como Executar os Testes
+
+O projeto possui uma suíte completa de testes unitários que cobre a lógica do worker, tratamento de erros e handlers HTTP (com mocks para evitar a dependência com o Postgres).
+
+Para rodar os testes e verificar a cobertura do código localmente:
+```powershell
+go test -cover ./...
+```
+
+---
+
 ## 📁 Estrutura do Projeto
 
-* `main.go`: Código fonte da aplicação contendo os handlers HTTP e a conexão com a base de dados.
-* `Dockerfile`: Configura o container Alpine leve para rodar o binário compilado.
-* `docker-compose.yml`: Orquestra o container da aplicação e o container do banco PostgreSQL com volumes persistentes.
-* `.gitignore`: Evita o envio de binários locais compilados para o Git.
+* `main.go`: Ponto de inicialização do banco, do worker assíncrono, roteador nativo e injeção do middleware de logs.
+* `apierror/`: Pacote para formatação JSON de erros e compatibilidade com erros envelopados.
+* `database/`: Pacote para inicialização e migração automática do esquema do banco de dados.
+* `middleware/`: Contém os middlewares da aplicação (como o Logger).
+* `task/`: Pacote de domínio contendo a definição da entidade, a interface e implementação de persistência, e os handlers HTTP.
+* `worker/`: Pacote responsável pela goroutine e canal de processamento assíncrono de eventos de tarefas.
+* `Dockerfile`: Configura o build em multi-estágio da aplicação para gerar um container Alpine leve.
+* `docker-compose.yml`: Orquestra o container da aplicação e do banco PostgreSQL.
