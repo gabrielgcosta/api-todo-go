@@ -21,8 +21,9 @@ type TaskEvent struct {
 }
 
 type Worker struct {
-	eventsChan chan TaskEvent
-	quit       chan struct{}
+	eventsChan  chan TaskEvent
+	quit        chan struct{}
+	OnProcessed func(TaskEvent)
 }
 
 func NewWorker(bufferSize int) *Worker {
@@ -64,4 +65,7 @@ func (w *Worker) processEvent(event TaskEvent) {
 	time.Sleep(500 * time.Millisecond)
 	log.Printf("[Worker] [INFO] Event processed: %s | Task ID: %d | Title: %q | At: %s",
 		event.Type, event.TaskID, event.Title, event.Timestamp.Format(time.RFC3339))
+	if w.OnProcessed != nil {
+		w.OnProcessed(event)
+	}
 }
