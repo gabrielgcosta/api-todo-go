@@ -1,38 +1,32 @@
 package worker_test
 
 import (
+	"bytes"
+	"log"
+	"os"
+	"strings"
 	"testing"
 	"time"
+
 	"todo_api/worker"
 )
 
-func TestWorkerLifecycle(t *testing.T) {
-	processed := make(chan worker.TaskEvent, 1)
+func TestWorker_QueueEvent_NoRabbitMQ(t *testing.T) {
+	// Captura logs para verificar se ele loga o erro e não panica ao receber client nil
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	defer log.SetOutput(os.Stderr)
 
-	w := worker.NewWorker(5)
-	w.OnProcessed = func(event worker.TaskEvent) {
-		processed <- event
-	}
-
-	w.Start()
-	defer w.Stop()
-
+	w := worker.NewWorker(nil)
 	w.QueueEvent(worker.TaskEvent{
 		Type:      worker.EventCreated,
-		TaskID:    42,
-		Title:     "Test Task",
+		TaskID:    1,
+		Title:     "Test",
 		Timestamp: time.Now(),
 	})
 
-	select {
-	case event := <-processed:
-		if event.TaskID != 42 {
-			t.Errorf("expected TaskID 42, got %d", event.TaskID)
-		}
-		if event.Title != "Test Task" {
-			t.Errorf("expected Title 'Test Task', got %q", event.Title)
-		}
-	case <-time.After(1 * time.Second):
-		t.Error("timeout waiting for worker to process event")
+	output := buf.String()
+	if !strings.Contains(output, "RabbitMQ client is not connected") {
+		t.Errorf("Expected log indicating RabbitMQ is not connected, got: %s", output)
 	}
 }

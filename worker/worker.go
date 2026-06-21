@@ -1,8 +1,14 @@
 package worker
 
 import (
+	"context"
+	"encoding/json"
 	"log"
 	"time"
+
+	"todo_api/rabbitmq"
+
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type EventType string
@@ -14,58 +20,64 @@ const (
 )
 
 type TaskEvent struct {
-	Type      EventType
-	TaskID    int
-	Title     string
-	Timestamp time.Time
+	Type      EventType `json:"type"`
+	TaskID    int       `json:"task_id"`
+	Title     string    `json:"title,omitempty"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 type Worker struct {
-	eventsChan  chan TaskEvent
-	quit        chan struct{}
-	OnProcessed func(TaskEvent)
+	rbClient *rabbitmq.Client
 }
 
-func NewWorker(bufferSize int) *Worker {
+// NewWorker cria um novo produtor de eventos
+func NewWorker(rbClient *rabbitmq.Client) *Worker {
 	return &Worker{
-		eventsChan: make(chan TaskEvent, bufferSize),
-		quit:       make(chan struct{}),
+		rbClient: rbClient,
 	}
 }
 
+// QueueEvent publica o evento no RabbitMQ
 func (w *Worker) QueueEvent(event TaskEvent) {
-	select {
-	case w.eventsChan <- event:
-	default:
-		log.Printf("[Worker] [WARNING] Queue full. Dropped event: %+v", event)
+	if w.rbClient == nil || w.rbClient.Channel == nil {
+		log.Println("[Worker] [ERROR] RabbitMQ client is not connected")
+		return
 	}
+
+	body, err := json.Marshal(event)
+	if err != nil {
+		log.Printf("[Worker] [ERROR] Failed to marshal event: %v", err)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = w.rbClient.Channel.PublishWithContext(ctx,
+		"",            // exchange
+		"task_events", // routing key
+		false,         // mandatory
+		false,         // immediate
+		amqp.Publishing{
+			ContentType: "application/json",
+			Body:        body,
+		})
+
+	if err != nil {
+		log.Printf("[Worker] [ERROR] Failed to publish a message: %v", err)
+		return
+	}
+
+	log.Printf("[Worker] [INFO] Published event %s for Task %d", event.Type, event.TaskID)
 }
 
+// Start e Stop não são mais loops contínuos aqui, mas os mantemos
+// para não quebrar o handler, ou podemos apenas removê-los e ajustar o main.go.
+// Para manter a compatibilidade com a struct atual:
 func (w *Worker) Start() {
-	go func() {
-		log.Println("[Worker] [INFO] Async worker started")
-		for {
-			select {
-			case event := <-w.eventsChan:
-				w.processEvent(event)
-			case <-w.quit:
-				log.Println("[Worker] [INFO] Async worker stopping")
-				return
-			}
-		}
-	}()
+	// não faz nada agora, já que publicamos diretamente no QueueEvent
 }
 
 func (w *Worker) Stop() {
-	close(w.quit)
-}
-
-func (w *Worker) processEvent(event TaskEvent) {
-	// Simulate heavy background processing (e.g. sending email, auditing)
-	time.Sleep(500 * time.Millisecond)
-	log.Printf("[Worker] [INFO] Event processed: %s | Task ID: %d | Title: %q | At: %s",
-		event.Type, event.TaskID, event.Title, event.Timestamp.Format(time.RFC3339))
-	if w.OnProcessed != nil {
-		w.OnProcessed(event)
-	}
+	// não faz nada
 }

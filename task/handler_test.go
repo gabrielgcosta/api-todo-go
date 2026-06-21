@@ -39,7 +39,7 @@ func TestCreateHandler(t *testing.T) {
 			return &task.Task{ID: 1, Title: title}, nil
 		},
 	}
-	w := worker.NewWorker(5)
+	w := worker.NewWorker(nil)
 	w.Start()
 	defer w.Stop()
 
@@ -65,7 +65,7 @@ func TestListHandler(t *testing.T) {
 			}, nil
 		},
 	}
-	w := worker.NewWorker(5)
+	w := worker.NewWorker(nil)
 	w.Start()
 	defer w.Stop()
 
@@ -99,7 +99,7 @@ func TestUpdateHandler(t *testing.T) {
 			return 0, nil
 		},
 	}
-	w := worker.NewWorker(5)
+	w := worker.NewWorker(nil)
 	w.Start()
 	defer w.Stop()
 
@@ -126,7 +126,7 @@ func TestDeleteHandler(t *testing.T) {
 			return 0, nil
 		},
 	}
-	w := worker.NewWorker(5)
+	w := worker.NewWorker(nil)
 	w.Start()
 	defer w.Stop()
 
