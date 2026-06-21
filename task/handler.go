@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 	"todo_api/apierror"
+	"todo_api/worker"
 )
 
 // TaskRepository defines the database operations required for tasks.
@@ -19,11 +21,15 @@ type TaskRepository interface {
 
 // Handler manages the HTTP transport for Task-related operations.
 type Handler struct {
-	repo TaskRepository
+	repo   TaskRepository
+	worker *worker.Worker
 }
 
-func NewHandler(repo TaskRepository) *Handler {
-	return &Handler{repo: repo}
+func NewHandler(repo TaskRepository, worker *worker.Worker) *Handler {
+	return &Handler{
+		repo:   repo,
+		worker: worker,
+	}
 }
 
 func validateTitle(title string) error {
@@ -69,6 +75,13 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		apierror.Write(w, r, apierror.Internal("Error inserting task in database", err))
 		return
 	}
+
+	h.worker.QueueEvent(worker.TaskEvent{
+		Type:      worker.EventCreated,
+		TaskID:    createdTask.ID,
+		Title:     createdTask.Title,
+		Timestamp: time.Now(),
+	})
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -116,6 +129,13 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.worker.QueueEvent(worker.TaskEvent{
+		Type:      worker.EventUpdated,
+		TaskID:    id,
+		Title:     input.Title,
+		Timestamp: time.Now(),
+	})
+
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Task updated successfully"))
 }
@@ -138,6 +158,12 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		apierror.Write(w, r, apierror.NotFound("Task not found", nil))
 		return
 	}
+
+	h.worker.QueueEvent(worker.TaskEvent{
+		Type:      worker.EventDeleted,
+		TaskID:    id,
+		Timestamp: time.Now(),
+	})
 
 	w.WriteHeader(http.StatusNoContent)
 }

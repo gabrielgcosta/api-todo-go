@@ -8,6 +8,7 @@ import (
 	"todo_api/database"
 	"todo_api/middleware"
 	"todo_api/task"
+	"todo_api/worker"
 )
 
 func main() {
@@ -22,8 +23,12 @@ func main() {
 	}
 	defer db.Close()
 
+	asyncWorker := worker.NewWorker(100)
+	asyncWorker.Start()
+	defer asyncWorker.Stop()
+
 	taskRepo := task.NewRepository(db)
-	taskHandler := task.NewHandler(taskRepo)
+	taskHandler := task.NewHandler(taskRepo, asyncWorker)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /tasks", taskHandler.Create)
